@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Porter Commission Calculator</title>
+<style>
+:root{
+  --bg:#eef2f0; --card:#ffffff; --ink:#14231d; --muted:#5b6b64; --line:#d3ddd8;
+  --accent:#0f6b4f; --accent-ink:#ffffff; --out:#f6ecd9; --out-ink:#6b4a0f;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1714; --card:#16231e; --ink:#e8f1ed; --muted:#93a69d; --line:#2a3d35;
+    --accent:#3fc596; --accent-ink:#0b1a14; --out:#2a2415; --out-ink:#f0d79a;
+  }
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;line-height:1.5}
+main{max-width:520px;margin:0 auto;padding:24px 16px 40px}
+h1{font-size:1.5rem;margin:0 0 4px;font-weight:700}
+p.sub{margin:0 0 20px;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+label{display:block;font-weight:600;font-size:.9rem;margin:0 0 6px}
+.row{display:flex;gap:12px}
+.row>div{flex:1}
+input{width:100%;font:inherit;font-size:1.1rem;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+input:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.field{margin-bottom:16px}
+.modes{display:flex;gap:8px;margin-bottom:16px}
+.modes button{flex:1;font:inherit;font-size:.9rem;padding:10px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.modes button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.result{margin-top:16px;border-radius:14px;padding:18px;background:var(--accent);color:var(--accent-ink)}
+.result .big{font-size:2rem;font-weight:700;margin:0}
+.result .lbl{margin:0;opacity:.85;font-size:.9rem}
+.split{display:flex;gap:12px;margin-top:12px}
+.split>div{flex:1;border-radius:12px;padding:14px;background:var(--out);color:var(--out-ink)}
+.split .n{font-size:1.25rem;font-weight:700;margin:0}
+.split .l{margin:0;font-size:.85rem}
+.tools{display:flex;gap:8px;margin-top:16px}
+.tools button{flex:1;font:inherit;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+table{width:100%;border-collapse:collapse;margin-top:18px;font-size:.9rem}
+th,td{text-align:right;padding:8px 6px;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+.wrap{overflow-x:auto}
+.empty{color:var(--muted);font-size:.9rem;margin-top:12px}
+.modes button,.tools button{transition:background-color .2s,color .2s,transform .12s}
+.modes button:active,.tools button:active{transform:scale(.96)}
+input{transition:border-color .2s,box-shadow .2s}
+input:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent)}
+@keyframes pop{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes rowIn{from{opacity:0;transform:translateX(-14px);background:var(--out)}to{opacity:1;transform:none}}
+@keyframes cardIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+#out.pop .result{animation:pop .45s cubic-bezier(.2,.8,.2,1) both}
+#out.pop .split>div:nth-child(1){animation:pop .45s .08s cubic-bezier(.2,.8,.2,1) both}
+#out.pop .split>div:nth-child(2){animation:pop .45s .16s cubic-bezier(.2,.8,.2,1) both}
+#rows tr.in{animation:rowIn .5s ease both}
+#listCard.show{animation:cardIn .4s ease both}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <h1>Porter commission calculator</h1>
+  <p class="sub">Work out the 13% commission and what is left after it.</p>
+
+  <section class="card">
+    <div class="row">
+      <div class="field">
+        <label for="amt" id="amtLbl">Total amount (₹)</label>
+        <input id="amt" type="number" inputmode="decimal" min="0" step="any" placeholder="e.g. 1500">
+      </div>
+      <div class="field">
+        <label for="rate">Commission (%)</label>
+        <input id="rate" type="number" inputmode="decimal" min="0" max="99" step="any" value="13">
+      </div>
+    </div>
+
+    <div id="out" hidden>
+      <div class="result">
+        <p class="lbl" id="mainLbl">Porter receives after commission</p>
+        <p class="big" id="mainVal">₹0</p>
+      </div>
+      <div class="split">
+        <div><p class="l">Total amount</p><p class="n" id="tot">₹0</p></div>
+        <div><p class="l">Commission</p><p class="n" id="com">₹0</p></div>
+      </div>
+    </div>
+    <p class="empty" id="empty">Enter an amount to see the result.</p>
+
+    <div class="tools">
+      <button id="add">Save to list</button>
+      <button id="clear">Clear list</button>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top:16px" id="listCard" hidden>
+    <strong>Saved calculations</strong>
+    <div class="wrap">
+      <table>
+        <thead><tr><th>Total</th><th>Commission</th><th>Net</th></tr></thead>
+        <tbody id="rows"></tbody>
+        <tfoot><tr><th>Sum</th><th id="sCom">₹0</th><th id="sNet">₹0</th></tr></tfoot>
+      </table>
+    </div>
+  </section>
+</main>
+<script>
+(function(){
+  var mode=1, saved=[];
+  var $=function(i){return document.getElementById(i)};
+  var fmt=function(n){return "₹"+n.toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2})};
+  var cur=null, fresh=false;
+  var still=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function tween(el,to){
+    var from=el._v||0;el._v=to;
+    if(still||from===to){el.textContent=fmt(to);return}
+    var t0=null,d=450;
+    cancelAnimationFrame(el._r||0);
+    function step(t){
+      if(t0===null)t0=t;
+      var p=Math.min((t-t0)/d,1),e=1-Math.pow(1-p,3);
+      el.textContent=fmt(from+(to-from)*e);
+      if(p<1)el._r=requestAnimationFrame(step);
+    }
+    el._r=requestAnimationFrame(step);
+  }
+
+  function calc(){
+    var a=parseFloat($("amt").value), r=parseFloat($("rate").value);
+    if(isNaN(r)||r<0||r>=100) r=NaN;
+    if(isNaN(a)||a<=0||isNaN(r)){cur=null;$("out").hidden=true;$("empty").hidden=false;return}
+    var total,com,net;
+    if(mode===1){total=a;com=a*r/100;net=total-com}
+    else{net=a;total=net/(1-r/100);com=total-net}
+    cur={total:total,com:com,net:net};
+    var wasHidden=$("out").hidden;
+    tween($("tot"),total);tween($("com"),com);
+    $("mainLbl").textContent=mode===1?"Porter receives after commission":"Customer must pay in total";
+    tween($("mainVal"),mode===1?net:total);
+    $("out").hidden=false;$("empty").hidden=true;
+    if(wasHidden){$("out").classList.remove("pop");void $("out").offsetWidth;$("out").classList.add("pop")}
+  }
+  function render(){
+    var tb=$("rows");tb.innerHTML="";var sc=0,sn=0;
+    saved.forEach(function(s,i){
+      sc+=s.com;sn+=s.net;
+      var tr=document.createElement("tr");
+      if(fresh&&i===saved.length-1)tr.className="in";
+      [s.total,s.com,s.net].forEach(function(v){var td=document.createElement("td");td.textContent=fmt(v);tr.appendChild(td)});
+      tb.appendChild(tr);
+    });
+    $("sCom").textContent=fmt(sc);$("sNet").textContent=fmt(sn);
+    var wasListHidden=$("listCard").hidden;
+    $("listCard").hidden=saved.length===0;
+    if(wasListHidden&&saved.length){$("listCard").classList.remove("show");void $("listCard").offsetWidth;$("listCard").classList.add("show")}
+  }
+  $("amt").oninput=calc;$("rate").oninput=calc;
+  $("add").onclick=function(){if(cur){saved.push(cur);fresh=true;render();fresh=false}};
+  $("clear").onclick=function(){saved=[];render()};
+})();
+</script>
+</body>
+</html>
